@@ -153,7 +153,7 @@ func sendRequestStream[T streamable](client *Client, req *http.Request) (*stream
 	req.Header.Set("Cache-Control", "no-cache")
 	req.Header.Set("Connection", "keep-alive")
 
-	resp, err := client.config.HTTPClient.Do(req) //nolint:bodyclose // body is closed in stream.Close()
+	resp, err := client.config.HTTPClient.Do(req)
 	if err != nil {
 		return new(streamReader[T]), err
 	}
