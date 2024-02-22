@@ -133,16 +133,14 @@ func TestHandleJSONErrorResp(t *testing.T) {
 	client := NewClient(mockToken)
 
 	testCases := []struct {
-		name        string
-		httpCode    int
-		contentType string
-		body        io.Reader
-		expected    string
+		name     string
+		httpCode int
+		body     io.Reader
+		expected string
 	}{
 		{
-			name:        "401 Invalid Authentication",
-			httpCode:    http.StatusUnauthorized,
-			contentType: "application/json",
+			name:     "401 Invalid Authentication",
+			httpCode: http.StatusUnauthorized,
 			body: bytes.NewReader([]byte(
 				`{
 					"error":{
@@ -156,9 +154,8 @@ func TestHandleJSONErrorResp(t *testing.T) {
 			expected: "error, status code: 401, message: You didn't provide an API key. ....",
 		},
 		{
-			name:        "401 Azure Access Denied",
-			httpCode:    http.StatusUnauthorized,
-			contentType: "application/json",
+			name:     "401 Azure Access Denied",
+			httpCode: http.StatusUnauthorized,
 			body: bytes.NewReader([]byte(
 				`{
 					"error":{
@@ -170,9 +167,8 @@ func TestHandleJSONErrorResp(t *testing.T) {
 			expected: "error, status code: 401, message: Access denied due to Virtual Network/Firewall rules.",
 		},
 		{
-			name:        "503 Model Overloaded",
-			httpCode:    http.StatusServiceUnavailable,
-			contentType: "application/json",
+			name:     "503 Model Overloaded",
+			httpCode: http.StatusServiceUnavailable,
 			body: bytes.NewReader([]byte(`
 				{
 					"error":{
@@ -185,9 +181,8 @@ func TestHandleJSONErrorResp(t *testing.T) {
 			expected: "error, status code: 503, message: That model...",
 		},
 		{
-			name:        "503 no message (Unknown response)",
-			httpCode:    http.StatusServiceUnavailable,
-			contentType: "application/json",
+			name:     "503 no message (Unknown response)",
+			httpCode: http.StatusServiceUnavailable,
 			body: bytes.NewReader([]byte(`
 				{
 					"error":{}
@@ -201,7 +196,6 @@ func TestHandleJSONErrorResp(t *testing.T) {
 			testCase := &http.Response{}
 			testCase.StatusCode = tc.httpCode
 			testCase.Header = http.Header{}
-			testCase.Header.Set("Content-Type", tc.contentType)
 			testCase.Body = io.NopCloser(tc.body)
 			err := client.handleErrorResp(testCase)
 			t.Log(err.Error())

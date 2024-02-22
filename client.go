@@ -243,41 +243,38 @@ func (c *Client) fullURL(suffix string, args ...any) string {
 
 func (c *Client) handleErrorResp(resp *http.Response) error {
 	contentType := resp.Header.Get("Content-Type")
-	mainContentType := strings.Split(contentType, ";")[0]
-	mainContentType = strings.ToLower(strings.TrimSpace(mainContentType))
 
-	switch mainContentType {
-	case "application/json":
-		var errRes ErrorResponse
-		err := json.NewDecoder(resp.Body).Decode(&errRes)
-		if err != nil || errRes.Error == nil {
-			reqErr := &RequestError{
+	if contentType != "" {
+		mainContentType := strings.Split(contentType, ";")[0]
+		mainContentType = strings.ToLower(strings.TrimSpace(mainContentType))
+
+		if mainContentType == "text/plain" {
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return err
+			}
+
+			return &RequestError{
 				HTTPStatusCode: resp.StatusCode,
-				Err:            err,
+				Err:            fmt.Errorf("%s", body),
 			}
-			if errRes.Error != nil {
-				reqErr.Err = errRes.Error
-			}
-			return reqErr
-		}
-
-		errRes.Error.HTTPStatusCode = resp.StatusCode
-		return errRes.Error
-	case "text/plain":
-		defer resp.Body.Close()
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-
-		return &RequestError{
-			HTTPStatusCode: resp.StatusCode,
-			Err:            fmt.Errorf("%s", body),
-		}
-	default:
-		return &RequestError{
-			HTTPStatusCode: resp.StatusCode,
-			Err:            fmt.Errorf("unexpected content type: %s", contentType),
 		}
 	}
+
+	// default to JSON error response
+	var errRes ErrorResponse
+	err := json.NewDecoder(resp.Body).Decode(&errRes)
+	if err != nil || errRes.Error == nil {
+		reqErr := &RequestError{
+			HTTPStatusCode: resp.StatusCode,
+			Err:            err,
+		}
+		if errRes.Error != nil {
+			reqErr.Err = errRes.Error
+		}
+		return reqErr
+	}
+
+	errRes.Error.HTTPStatusCode = resp.StatusCode
+	return errRes.Error
 }
