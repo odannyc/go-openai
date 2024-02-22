@@ -195,7 +195,6 @@ func TestHandleJSONErrorResp(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			testCase := &http.Response{}
 			testCase.StatusCode = tc.httpCode
-			testCase.Header = http.Header{}
 			testCase.Body = io.NopCloser(tc.body)
 			err := client.handleErrorResp(testCase)
 			t.Log(err.Error())
