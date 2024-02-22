@@ -119,8 +119,7 @@ func (e *errorReader) Read(_ []byte) (n int, err error) {
 	return 0, e.err
 }
 
-func TestHandleErrorResp(t *testing.T) {
-	// var errRes *ErrorResponse
+func TestHandleJSONErrorResp(t *testing.T) {
 	var errRes ErrorResponse
 	var reqErr RequestError
 	t.Log(errRes, errRes.Error)
@@ -207,6 +206,64 @@ func TestHandleErrorResp(t *testing.T) {
 			e := &APIError{}
 			if !errors.As(err, &e) {
 				t.Errorf("(%s) Expected error to be of type APIError", tc.name)
+				t.Fail()
+			}
+		})
+	}
+}
+
+func TestHandleTextErrorResp(t *testing.T) {
+	const mockToken = "mock token"
+	client := NewClient(mockToken)
+
+	testCases := []struct {
+		name        string
+		httpCode    int
+		contentType string
+		body        io.Reader
+		expected    string
+	}{
+		{
+			name:        "401 Invalid Authentication",
+			httpCode:    http.StatusUnauthorized,
+			contentType: "text/plain",
+			body:        bytes.NewReader([]byte(`You didn't provide an API key. ....`)),
+			expected:    "error, status code: 401, message: You didn't provide an API key. ....",
+		},
+		{
+			name:        "401 Azure Access Denied",
+			httpCode:    http.StatusUnauthorized,
+			contentType: "text/plain",
+			body:        bytes.NewReader([]byte(`Access denied due to Virtual Network/Firewall rules.`)),
+			expected:    "error, status code: 401, message: Access denied due to Virtual Network/Firewall rules.",
+		},
+		{
+			name:        "503 Model Overloaded",
+			httpCode:    http.StatusServiceUnavailable,
+			contentType: "text/plain",
+			body:        bytes.NewReader([]byte(`That model...`)),
+			expected:    "error, status code: 503, message: That model...",
+		},
+		{
+			name:        "503 no message (Unknown response)",
+			httpCode:    http.StatusServiceUnavailable,
+			contentType: "text/plain",
+			body:        bytes.NewReader([]byte(``)),
+			expected:    "error, status code: 503, message: ",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			testCase := &http.Response{}
+			testCase.StatusCode = tc.httpCode
+			testCase.Header = http.Header{}
+			testCase.Header.Set("Content-Type", tc.contentType)
+			testCase.Body = io.NopCloser(tc.body)
+			err := client.handleErrorResp(testCase)
+			t.Log(err.Error())
+			if err.Error() != tc.expected {
+				t.Errorf("Unexpected error: %v , expected: %s", err, tc.expected)
 				t.Fail()
 			}
 		})
