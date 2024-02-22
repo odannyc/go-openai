@@ -233,7 +233,7 @@ func TestHandleTextErrorResp(t *testing.T) {
 		{
 			name:        "401 Azure Access Denied",
 			httpCode:    http.StatusUnauthorized,
-			contentType: "text/plain",
+			contentType: "text/html",
 			body:        bytes.NewReader([]byte(`Access denied due to Virtual Network/Firewall rules.`)),
 			expected:    "error, status code: 401, message: Access denied due to Virtual Network/Firewall rules.",
 		},
@@ -247,7 +247,7 @@ func TestHandleTextErrorResp(t *testing.T) {
 		{
 			name:        "503 no message (Unknown response)",
 			httpCode:    http.StatusServiceUnavailable,
-			contentType: "text/plain",
+			contentType: "text/html",
 			body:        bytes.NewReader([]byte(``)),
 			expected:    "error, status code: 503, message: ",
 		},
