@@ -234,7 +234,6 @@ func TestHandleJSONErrorResp(t *testing.T) {
 				t.Errorf("(%s) Expected error to be of type APIError", tc.name)
 				t.Fail()
 			}
-
 		})
 	}
 }
