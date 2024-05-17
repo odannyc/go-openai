@@ -224,9 +224,18 @@ func TestHandleJSONErrorResp(t *testing.T) {
 				t.Fail()
 			}
 
-			_, retryAfter := IsTooManyRequests(err)
+			is429, retryAfter := IsTooManyRequests(err)
 			if tc.retryAfter != retryAfter {
 				t.Errorf("(%s) Expected error to have HTTPRetryAfter of \"%s\" but got \"%s\"", tc.name, tc.retryAfter, retryAfter)
+				t.Fail()
+			}
+			if tc.httpCode == http.StatusTooManyRequests && !is429 {
+				t.Errorf("(%s) Expected error to indicate 429, but it did not", tc.name)
+				t.Fail()
+			}
+			if tc.httpCode != http.StatusTooManyRequests && is429 {
+				t.Errorf("(%s) Expected error not to indicate 429, but it did", tc.name)
+				t.Fail()
 			}
 
 			e := &APIError{}
@@ -305,9 +314,17 @@ func TestHandleTextErrorResp(t *testing.T) {
 				t.Fail()
 			}
 
-			_, retryAfter := IsTooManyRequests(err)
+			is429, retryAfter := IsTooManyRequests(err)
 			if tc.retryAfter != retryAfter {
 				t.Errorf("(%s) Expected error to have HTTPRetryAfter of \"%s\" but got \"%s\"", tc.name, tc.retryAfter, retryAfter)
+			}
+			if tc.httpCode == http.StatusTooManyRequests && !is429 {
+				t.Errorf("(%s) Expected error to indicate 429, but it did not", tc.name)
+				t.Fail()
+			}
+			if tc.httpCode != http.StatusTooManyRequests && is429 {
+				t.Errorf("(%s) Expected error not to indicate 429, but it did", tc.name)
+				t.Fail()
 			}
 		})
 	}
