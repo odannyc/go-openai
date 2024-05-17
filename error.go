@@ -2,6 +2,7 @@ package openai
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -10,15 +11,13 @@ import (
 // IsTooManyRequests takes an error returned by a client and check whether the error indicates that the
 // client got a 429 "Too Many Requests" response from the server.
 func IsTooManyRequests(err error) (is429 bool, retryAfter string) {
-	switch e := err.(type) {
-	case *APIError:
-		if e.HTTPStatusCode == http.StatusTooManyRequests {
-			return true, e.HTTPRetryAfter
-		}
-	case *RequestError:
-		if e.HTTPStatusCode == http.StatusTooManyRequests {
-			return true, e.HTTPRetryAfter
-		}
+	apiErr := new(APIError)
+	reqErr := new(RequestError)
+	switch {
+	case errors.As(err, &apiErr) && apiErr.HTTPStatusCode == http.StatusTooManyRequests:
+		return true, apiErr.HTTPRetryAfter
+	case errors.As(err, &reqErr) && reqErr.HTTPStatusCode == http.StatusTooManyRequests:
+		return true, reqErr.HTTPRetryAfter
 	}
 	return false, ""
 }
