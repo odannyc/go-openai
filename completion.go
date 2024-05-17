@@ -169,6 +169,9 @@ type CompletionResponse struct {
 //
 // If using a fine-tuned model, simply provide the model's ID in the CompletionRequest object,
 // and the server will use the model's parameters to generate the completion.
+//
+// If the server returned 429 "Too Many Requests", then calling IsTooManyRequests on the error will return the value of the
+// "Retry-After" header.
 func (c *Client) CreateCompletion(
 	ctx context.Context,
 	request CompletionRequest,

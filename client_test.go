@@ -133,10 +133,11 @@ func TestHandleJSONErrorResp(t *testing.T) {
 	client := NewClient(mockToken)
 
 	testCases := []struct {
-		name     string
-		httpCode int
-		body     io.Reader
-		expected string
+		name       string
+		httpCode   int
+		retryAfter string
+		body       io.Reader
+		expected   string
 	}{
 		{
 			name:     "401 Invalid Authentication",
@@ -189,6 +190,21 @@ func TestHandleJSONErrorResp(t *testing.T) {
 				}`)),
 			expected: "error, status code: 503, message: ",
 		},
+		{
+			name:       "429 too many requests",
+			httpCode:   http.StatusTooManyRequests,
+			retryAfter: "100",
+			body: bytes.NewReader([]byte(`
+			{
+				"error":{
+					"message": "Wow... you need to SLOW DOWN",
+					"type":"server_error",
+					"param":null,
+					"code":null
+				}
+			}`)),
+			expected: "error, status code: 429, message: Wow... you need to SLOW DOWN",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -196,6 +212,11 @@ func TestHandleJSONErrorResp(t *testing.T) {
 			testCase := &http.Response{}
 			testCase.StatusCode = tc.httpCode
 			testCase.Body = io.NopCloser(tc.body)
+			if len(tc.retryAfter) > 0 {
+				testCase.Header = http.Header{
+					"Retry-After": []string{tc.retryAfter},
+				}
+			}
 			err := client.handleErrorResp(testCase)
 			t.Log(err.Error())
 			if err.Error() != tc.expected {
@@ -203,11 +224,17 @@ func TestHandleJSONErrorResp(t *testing.T) {
 				t.Fail()
 			}
 
+			_, retryAfter := IsTooManyRequests(err)
+			if tc.retryAfter != retryAfter {
+				t.Errorf("(%s) Expected error to have HTTPRetryAfter of \"%s\" but got \"%s\"", tc.name, tc.retryAfter, retryAfter)
+			}
+
 			e := &APIError{}
 			if !errors.As(err, &e) {
 				t.Errorf("(%s) Expected error to be of type APIError", tc.name)
 				t.Fail()
 			}
+
 		})
 	}
 }
@@ -219,6 +246,7 @@ func TestHandleTextErrorResp(t *testing.T) {
 	testCases := []struct {
 		name        string
 		httpCode    int
+		retryAfter  string
 		contentType string
 		body        io.Reader
 		expected    string
@@ -251,6 +279,14 @@ func TestHandleTextErrorResp(t *testing.T) {
 			body:        bytes.NewReader([]byte(``)),
 			expected:    "error, status code: 503, message: ",
 		},
+		{
+			name:        "429 too many requests",
+			httpCode:    http.StatusTooManyRequests,
+			retryAfter:  "100",
+			contentType: "text/html",
+			body:        bytes.NewReader([]byte(`Wow... you need to slow down`)),
+			expected:    "error, status code: 429, message: Wow... you need to slow down",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -259,12 +295,20 @@ func TestHandleTextErrorResp(t *testing.T) {
 			testCase.StatusCode = tc.httpCode
 			testCase.Header = http.Header{}
 			testCase.Header.Set("Content-Type", tc.contentType)
+			if len(tc.retryAfter) > 0 {
+				testCase.Header.Set("Retry-After", tc.retryAfter)
+			}
 			testCase.Body = io.NopCloser(tc.body)
 			err := client.handleErrorResp(testCase)
 			t.Log(err.Error())
 			if err.Error() != tc.expected {
 				t.Errorf("Unexpected error: %v , expected: %s", err, tc.expected)
 				t.Fail()
+			}
+
+			_, retryAfter := IsTooManyRequests(err)
+			if tc.retryAfter != retryAfter {
+				t.Errorf("(%s) Expected error to have HTTPRetryAfter of \"%s\" but got \"%s\"", tc.name, tc.retryAfter, retryAfter)
 			}
 		})
 	}
