@@ -463,7 +463,7 @@ func TestClientReturnsRequestBuilderErrors(t *testing.T) {
 	}
 }
 
-func TestClientReturnsRequestBuilderErrorsAddtion(t *testing.T) {
+func TestClientReturnsRequestBuilderErrorsAddition(t *testing.T) {
 	config := DefaultConfig(test.GetTestToken())
 	client := NewClientWithConfig(config)
 	client.requestBuilder = &failingRequestBuilder{}
