@@ -241,6 +241,7 @@ func (c *Client) fullURL(suffix string, args ...any) string {
 	return fmt.Sprintf("%s%s", c.config.BaseURL, suffix)
 }
 
+// handleErrorResp returns either *RequestError or *APIError.
 func (c *Client) handleErrorResp(resp *http.Response) error {
 	contentType := resp.Header.Get("Content-Type")
 
@@ -253,6 +254,7 @@ func (c *Client) handleErrorResp(resp *http.Response) error {
 
 			return &RequestError{
 				HTTPStatusCode: resp.StatusCode,
+				HTTPRetryAfter: resp.Header.Get("Retry-After"),
 				Err:            fmt.Errorf("%s", body),
 			}
 		}
@@ -264,6 +266,7 @@ func (c *Client) handleErrorResp(resp *http.Response) error {
 	if err != nil || errRes.Error == nil {
 		reqErr := &RequestError{
 			HTTPStatusCode: resp.StatusCode,
+			HTTPRetryAfter: resp.Header.Get("Retry-After"),
 			Err:            err,
 		}
 		if errRes.Error != nil {
@@ -273,5 +276,6 @@ func (c *Client) handleErrorResp(resp *http.Response) error {
 	}
 
 	errRes.Error.HTTPStatusCode = resp.StatusCode
+	errRes.Error.HTTPRetryAfter = resp.Header.Get("Retry-After")
 	return errRes.Error
 }

@@ -2,6 +2,7 @@ package openai_test
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
@@ -275,5 +276,61 @@ func TestRequestError(t *testing.T) {
 
 	if reqErr.Unwrap() == nil {
 		t.Fatalf("Empty request error occurred")
+	}
+}
+
+func TestIsTooManyRequests(t *testing.T) {
+	testCases := []struct {
+		name       string
+		err        error
+		is429      bool
+		retryAfter string
+	}{
+		{
+			name:       "nil",
+			err:        nil,
+			is429:      false,
+			retryAfter: "",
+		},
+		{
+			name: "APIError with 429 code and Retry-After",
+			err: &openai.APIError{
+				HTTPStatusCode: http.StatusTooManyRequests,
+				HTTPRetryAfter: "100",
+			},
+			is429:      true,
+			retryAfter: "100",
+		},
+		{
+			name: "RequestError with 429 code and Retry-After",
+			err: &openai.RequestError{
+				HTTPStatusCode: http.StatusTooManyRequests,
+				HTTPRetryAfter: "100",
+			},
+			is429:      true,
+			retryAfter: "100",
+		},
+		{
+			name: "Wrapped RequestError",
+			err: fmt.Errorf("oops: %w", &openai.RequestError{
+				HTTPStatusCode: http.StatusTooManyRequests,
+				HTTPRetryAfter: "100",
+			}),
+			is429:      true,
+			retryAfter: "100",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			actualIs429, actualRetryAfter := openai.IsTooManyRequests(tc.err)
+			if actualIs429 != tc.is429 {
+				t.Errorf("(%s) expected is429 to be %v but was %v", tc.name, tc.is429, actualIs429)
+			}
+			if actualRetryAfter != tc.retryAfter {
+				t.Errorf("(%s) expected retryAfter to be \"%v\" but was \"%v\"", tc.name, tc.retryAfter, actualRetryAfter)
+			}
+		})
 	}
 }

@@ -320,6 +320,10 @@ type ChatCompletionResponse struct {
 }
 
 // CreateChatCompletion — API call to Create a completion for the chat message.
+//
+// If the server returned 429 "Too Many Requests", then calling
+// IsTooManyRequests on the error will return the value of the "Retry-After"
+// header.
 func (c *Client) CreateChatCompletion(
 	ctx context.Context,
 	request ChatCompletionRequest,

@@ -2,9 +2,25 @@ package openai
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 )
+
+// IsTooManyRequests takes an error returned by a client and check whether the error indicates that the
+// client got a 429 "Too Many Requests" response from the server.
+func IsTooManyRequests(err error) (is429 bool, retryAfter string) {
+	apiErr := new(APIError)
+	reqErr := new(RequestError)
+	switch {
+	case errors.As(err, &apiErr) && apiErr.HTTPStatusCode == http.StatusTooManyRequests:
+		return true, apiErr.HTTPRetryAfter
+	case errors.As(err, &reqErr) && reqErr.HTTPStatusCode == http.StatusTooManyRequests:
+		return true, reqErr.HTTPRetryAfter
+	}
+	return false, ""
+}
 
 // APIError provides error information returned by the OpenAI API.
 // InnerError struct is only valid for Azure OpenAI Service.
@@ -14,6 +30,7 @@ type APIError struct {
 	Param          *string     `json:"param,omitempty"`
 	Type           string      `json:"type"`
 	HTTPStatusCode int         `json:"-"`
+	HTTPRetryAfter string      `json:"-"`
 	InnerError     *InnerError `json:"innererror,omitempty"`
 }
 
@@ -26,6 +43,7 @@ type InnerError struct {
 // RequestError provides informations about generic request errors.
 type RequestError struct {
 	HTTPStatusCode int
+	HTTPRetryAfter string
 	Err            error
 }
 
