@@ -8,6 +8,20 @@ import (
 	"strings"
 )
 
+// GetErrHTTPStatus returns the HTTP response status code that caused the given error.
+// If the error was not caused by an HTTP response, it returns 0.
+func GetErrHTTPStatus(err error) int {
+	apiErr := new(APIError)
+	reqErr := new(RequestError)
+	switch {
+	case errors.As(err, &apiErr):
+		return apiErr.HTTPStatusCode
+	case errors.As(err, &reqErr):
+		return reqErr.HTTPStatusCode
+	}
+	return 0
+}
+
 // IsTooManyRequests takes an error returned by a client and check whether the error indicates that the
 // client got a 429 "Too Many Requests" response from the server.
 func IsTooManyRequests(err error) (is429 bool, retryAfter string) {

@@ -321,6 +321,9 @@ type ChatCompletionResponse struct {
 
 // CreateChatCompletion — API call to Create a completion for the chat message.
 //
+// If an error is returned, you can check whether it was caused by an HTTP response by
+// calling GetErrHTTPStatus(err).
+//
 // If the server returned 429 "Too Many Requests", then calling
 // IsTooManyRequests on the error will return the value of the "Retry-After"
 // header.

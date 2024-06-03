@@ -314,6 +314,11 @@ func TestHandleTextErrorResp(t *testing.T) {
 				t.Fail()
 			}
 
+			if tc.httpCode != GetErrHTTPStatus(err) {
+				t.Errorf("(%s) Expected HTTP status %d but got %d", tc.name, tc.httpCode, GetErrHTTPStatus(err))
+				t.Fail()
+			}
+
 			is429, retryAfter := IsTooManyRequests(err)
 			if tc.retryAfter != retryAfter {
 				t.Errorf("(%s) Expected error to have HTTPRetryAfter of \"%s\" but got \"%s\"", tc.name, tc.retryAfter, retryAfter)
@@ -324,6 +329,39 @@ func TestHandleTextErrorResp(t *testing.T) {
 			}
 			if tc.httpCode != http.StatusTooManyRequests && is429 {
 				t.Errorf("(%s) Expected error not to indicate 429, but it did", tc.name)
+				t.Fail()
+			}
+		})
+	}
+}
+
+func TestHandleErrorResponseNoBody(t *testing.T) {
+	const mockToken = "mock token"
+	client := NewClient(mockToken)
+
+	testCases := []struct {
+		name     string
+		httpCode int
+	}{
+		{
+			name:     "422",
+			httpCode: http.StatusUnprocessableEntity,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			testCase := &http.Response{}
+			testCase.StatusCode = tc.httpCode
+			testCase.Body = http.NoBody
+			err := client.handleErrorResp(testCase)
+			t.Log(err.Error())
+			if err == nil {
+				t.Errorf("Did not get expected error")
+				t.Fail()
+			}
+			if tc.httpCode != GetErrHTTPStatus(err) {
+				t.Errorf("(%s) Expected HTTP status %d but got %d", tc.name, tc.httpCode, GetErrHTTPStatus(err))
 				t.Fail()
 			}
 		})
